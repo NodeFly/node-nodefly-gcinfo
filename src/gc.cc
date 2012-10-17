@@ -4,11 +4,15 @@
 using namespace v8;
 using namespace node;
 
+// Global Singletons //
 Persistent<Function> afore_callback;
 Persistent<Object>   afore_context;
 
 struct ReshelveBaton {
+	// Required //
 	uv_work_t request;
+	
+	// Use Defined [Optional] //
 	size_t heap_size;
 };
 
@@ -17,19 +21,15 @@ static size_t getheap() {
 	HeapStatistics stats;
 
 	V8::GetHeapStatistics(&stats);
-  
-	size_t heap_size_total = stats.total_heap_size();
-	size_t heap_size_limit = stats.heap_size_limit();
-	size_t heap_size_exec  = stats.total_heap_size_executable();
-	size_t heap_size_used  = stats.used_heap_size();
 
-	return heap_size_used;
+	return stats.used_heap_size();
 
 }
 
 static void nothing(uv_work_t* request)
 {
 	// Does nothing
+	// Necessary for function
 }
 
 // Executed on a the main even loop / thread
@@ -63,18 +63,28 @@ static void after_gc(GCType type, GCCallbackFlags flags)
 static Handle<Value> RegisterCallback(const Arguments& args) {
 	    
 	Handle<Function> cb = Handle<Function>::Cast(args[0]);
+	Handle<BooleanObject> handleAll = Handle<BooleanObject>::Cast(args[1]);
 	
+	GCType type = kGCTypeMarkSweepCompact;
+	
+	// We retain these as Persistent objects for async callbacks
 	afore_callback = Persistent<Function>::New(cb);
 	afore_context  = Persistent<Object>::New(Context::GetCalling()->Global());
 
-	V8::AddGCEpilogueCallback(after_gc);
-
+	// Receive a callback _only_ after a full GC of
+	// type kGCTypeMarkSweepCompact
+	// 
+	// this callback executes on a separate thread
+	V8::AddGCEpilogueCallback(after_gc,type);
+	
+	
+	// The function must return, even if it's nothing
 	return Undefined();
 }
 
 static void init(Handle<Object> target) {
   
-	target->Set(String::NewSymbol("on"),
+	target->Set(String::NewSymbol("onGC"),
 		FunctionTemplate::New(RegisterCallback)->GetFunction());
 
 }
