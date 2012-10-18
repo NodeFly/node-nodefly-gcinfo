@@ -1,7 +1,7 @@
 var b = require("./index")
 
-b.onGC(function(x){
-	console.log("Heap After GC: ",x);
+b.onGC(function(usage,type,flags,type_raw,flags_raw){
+	console.log("Heap After GC: ",usage,type,flags,type_raw,flags_raw);
 });
 
 var l=[];
