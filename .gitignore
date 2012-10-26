@@ -3,4 +3,5 @@ Vagrantfile
 .vagrant
 .mysql
 .lock-wscript
+node_modules
 
