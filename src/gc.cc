@@ -4,7 +4,7 @@
 using namespace v8;
 using namespace node;
 
-// Global Singletons //
+// Global Singletons Containing Our Async Callbacks //
 Persistent<Function> afore_callback;
 Persistent<Object>   afore_context;
 
@@ -119,9 +119,6 @@ static Handle<Value> RegisterCallback(const Arguments& args) {
 	afore_callback = Persistent<Function>::New(cb);
 	afore_context  = Persistent<Object>::New(Context::GetCalling()->Global());
 	
-	// Receive a callback _only_ after a full GC of
-	// type kGCTypeMarkSweepCompact
-	// 
 	// this callback executes on a separate thread
 	V8::AddGCEpilogueCallback(after_gc);
 	
