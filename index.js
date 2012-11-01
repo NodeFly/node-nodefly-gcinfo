@@ -20,6 +20,10 @@ var version_defaults = {
 	'v0.8.10': 'v0.8.12',
 	'v0.8.11': 'v0.8.12',
 	'v0.8.12': 'v0.8.12',
+	'v0.8.13': 'v0.8.12',
+	'v0.8.14': 'v0.8.12',
+	'v0.8.15': 'v0.8.12',
+	'v0.8.16': 'v0.8.12',
 	
 	// Version 6
 	'v0.6.0': 'v0.6.12',
@@ -39,6 +43,11 @@ var version_defaults = {
 	'v0.9.2': 'v0.9.3',
 	'v0.9.3': 'v0.9.3'
 	
+}
+
+if(!version_defaults[vers]) {
+	console.warn('Unsupported Node Version: Trying v0.8.12 Compatability')
+	vers = 'v0.8.12'
 }
 
 var path = "./compiled/" + plat + "/" + arch + "/" + version_defaults[vers]
