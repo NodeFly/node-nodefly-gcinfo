@@ -1,6 +1,6 @@
 {
   "name": "nodefly-gcinfo-src",
-  "version": "0.0.1",
+  "version": "0.0.6",
   "description": "NodeFly Garbage Collection Inspector",
   "main": "index.js",
   "repository":"git@github.com:NodeFly/node-nodefly-gcinfo.git",
