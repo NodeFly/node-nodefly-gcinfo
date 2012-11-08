@@ -1,7 +1,7 @@
 var fs = require('fs')
 
 var plat = process.platform
-var arch = process.config.variables.target_arch
+var arch = process.arch
 var vers = process.version
 
 if(plat=='solaris') plat='sunos'
