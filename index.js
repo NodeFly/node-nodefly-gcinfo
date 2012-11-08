@@ -1,7 +1,7 @@
 var fs = require('fs')
 
 var plat = process.platform
-var arch = process.arch
+var arch = process.config.variables.target_arch
 var vers = process.version
 
 var version_defaults = {
