@@ -45,7 +45,7 @@ static void nothing(uv_work_t* request)
 }
 
 // Executed on a the main even loop / thread
-static void after_gc_async(uv_work_t* request)
+static void after_gc_async(uv_work_t* request, int throwaway)
 {
 	
 	Baton *baton = static_cast<Baton*>(request->data);
