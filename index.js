@@ -68,7 +68,7 @@ var version_defaults = {
 }
 
 if(!version_defaults[vers]) {
-	console.warn('Unsupported Node Version: Trying v0.8.12 Compatability')
+	console.warn('nodefly-gcinfo: Unsupported Node Version: Trying v0.8.12 Compatability')
 	vers = 'v0.8.12'
 }
 
@@ -76,4 +76,9 @@ var path = "./compiled/" + plat + "/" + arch + "/" + version_defaults[vers]
 
 var modpath = path + "/gcinfo"
 
-module.exports = require(modpath)
+try {
+	module.exports = require(modpath)
+}
+catch (err) {
+	module.exports = { onGC: function(){} }
+}
