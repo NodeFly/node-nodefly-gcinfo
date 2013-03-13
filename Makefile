@@ -21,7 +21,8 @@ build: bin
 	
 bin:
 	mkdir -p ${RELEASE}
-	node-waf configure
+	# remove --dest-cpu ia32 to compile in x64 on 64bit host
+	node-waf configure --dest-cpu ia32
 	node-waf build
 	cp build/Release/gcinfo.node ${RELEASE}
 
