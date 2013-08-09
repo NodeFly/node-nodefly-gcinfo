@@ -45,7 +45,11 @@ static void nothing(uv_work_t* request)
 }
 
 // Executed on a the main even loop / thread
+#if (UV_VERSION_MAJOR == 0) && (UV_VERSION_MINOR <= 8)
+static void after_gc_async(uv_work_t* request)
+#else
 static void after_gc_async(uv_work_t* request, int throwaway)
+#endif
 {
 	
 	Baton *baton = static_cast<Baton*>(request->data);
