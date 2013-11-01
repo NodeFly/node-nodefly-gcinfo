@@ -1,8 +1,28 @@
 #include <v8.h>
 #include <node.h>
 
-using namespace v8;
-using namespace node;
+namespace {
+
+using v8::Arguments;
+using v8::Context;
+using v8::Function;
+using v8::FunctionTemplate;
+using v8::GCCallbackFlags;
+using v8::GCType;
+using v8::Handle;
+using v8::HeapStatistics;
+using v8::Integer;
+using v8::Object;
+using v8::Persistent;
+using v8::String;
+using v8::Undefined;
+using v8::V8;
+using v8::Value;
+using v8::kGCCallbackFlagCompacted;
+using v8::kGCTypeAll;
+using v8::kGCTypeMarkSweepCompact;
+using v8::kGCTypeScavenge;
+using v8::kNoGCCallbackFlags;
 
 // Global Singletons Containing Our Async Callbacks //
 Persistent<Function> afore_callback;
@@ -141,5 +161,7 @@ static void init(Handle<Object> target) {
 		FunctionTemplate::New(RegisterCallback)->GetFunction());
 	
 }
+
+}	// namespace anonymous
 
 NODE_MODULE(gcinfo, init)
