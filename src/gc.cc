@@ -35,28 +35,11 @@ QUEUE                baton_queue;
 struct Baton {
 
 	QUEUE baton_queue;
-	size_t * stats; // The HeapStatistics Snapshot
 	GCType gcType;
 	GCCallbackFlags gcFlags; 
-	
-};
+	HeapStatistics stats;
 
-static size_t* getheap() {
-	
-	HeapStatistics heap;
-	
-	V8::GetHeapStatistics(&heap);
-	
-	size_t * stats = new size_t[4];
-	
-	stats[0] = heap.used_heap_size();
-	stats[1] = heap.total_heap_size();
-	stats[2] = heap.heap_size_limit();
-	stats[3] = heap.total_heap_size_executable();
-	
-	return stats;
-	
-}
+};
 
 static void after_gc_idle(uv_idle_t*, int) {
 
@@ -72,7 +55,7 @@ static void after_gc_idle(uv_idle_t*, int) {
 		const int argc = 5;
 		Handle<Value> argv[argc];
 
-		argv[0] = Integer::New(baton->stats[0]);
+		argv[0] = Integer::New(baton->stats.used_heap_size());
 
 		switch(baton->gcType)
 		{
@@ -105,8 +88,6 @@ static void after_gc_idle(uv_idle_t*, int) {
 
 		argv[3] = Integer::New(baton->gcType);
 		argv[4] = Integer::New(baton->gcFlags);
-
-		delete [] baton->stats;
 		delete baton;
 
 		afore_callback->Call(afore_context, argc, argv);
@@ -121,9 +102,9 @@ static void after_gc(GCType type, GCCallbackFlags flags)
 {
 
 	Baton *baton = new Baton();
-	baton->stats   = getheap();
 	baton->gcType  = type;
 	baton->gcFlags = flags;
+	V8::GetHeapStatistics(&baton->stats);
 	uv_idle_start(&idle_handle, after_gc_idle);
 	QUEUE_INSERT_TAIL(&baton_queue, &baton->baton_queue);
 
