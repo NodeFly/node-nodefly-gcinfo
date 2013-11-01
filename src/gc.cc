@@ -1,3 +1,4 @@
+#include "queue.h"
 #include <v8.h>
 #include <node.h>
 
@@ -10,6 +11,7 @@ using v8::FunctionTemplate;
 using v8::GCCallbackFlags;
 using v8::GCType;
 using v8::Handle;
+using v8::HandleScope;
 using v8::HeapStatistics;
 using v8::Integer;
 using v8::Object;
@@ -27,14 +29,12 @@ using v8::kNoGCCallbackFlags;
 // Global Singletons Containing Our Async Callbacks //
 Persistent<Function> afore_callback;
 Persistent<Object>   afore_context;
+uv_idle_t            idle_handle;
+QUEUE                baton_queue;
 
 struct Baton {
-	
-	// Required //
-	uv_work_t request;
-	
-	// Use Defined [Optional] //
-	
+
+	QUEUE baton_queue;
 	size_t * stats; // The HeapStatistics Snapshot
 	GCType gcType;
 	GCCallbackFlags gcFlags; 
@@ -58,62 +58,60 @@ static size_t* getheap() {
 	
 }
 
-static void nothing(uv_work_t* request)
-{
-	// Does nothing
-	// Necessary for function
-}
+static void after_gc_idle(uv_idle_t*, int) {
 
-// Executed on a the main even loop / thread
-#if (UV_VERSION_MAJOR == 0) && (UV_VERSION_MINOR <= 8)
-static void after_gc_async(uv_work_t* request)
-#else
-static void after_gc_async(uv_work_t* request, int throwaway)
-#endif
-{
-	
-	Baton *baton = static_cast<Baton*>(request->data);
-	
-	Handle<Value> argv[5];
-	argv[0] = Integer::New(baton->stats[0]);
-	
-	switch(baton->gcType)
-	{
-		case kGCTypeAll:
-			argv[1] = String::New("kGCTypeAll");
-			break;
-		case kGCTypeMarkSweepCompact:
-			argv[1] = String::New("kGCTypeMarkSweepCompact");
-			break;
-		case kGCTypeScavenge:
-			argv[1] = String::New("kGCTypeScavenge");
-			break;
-		default:
-			argv[1] = String::New("UnknownType");
-			break;
+	HandleScope handle_scope;
+
+	uv_idle_stop(&idle_handle);
+	while(!QUEUE_EMPTY(&baton_queue)) {
+		QUEUE* q = QUEUE_HEAD(&baton_queue);
+		QUEUE_REMOVE(q);
+
+		Baton* baton = QUEUE_DATA(q, Baton, baton_queue);
+
+		const int argc = 5;
+		Handle<Value> argv[argc];
+
+		argv[0] = Integer::New(baton->stats[0]);
+
+		switch(baton->gcType)
+		{
+			case kGCTypeAll:
+				argv[1] = String::New("kGCTypeAll");
+				break;
+			case kGCTypeMarkSweepCompact:
+				argv[1] = String::New("kGCTypeMarkSweepCompact");
+				break;
+			case kGCTypeScavenge:
+				argv[1] = String::New("kGCTypeScavenge");
+				break;
+			default:
+				argv[1] = String::New("UnknownType");
+				break;
+		}
+
+		switch(baton->gcFlags)
+		{
+			case kGCCallbackFlagCompacted:
+				argv[2] = String::New("kGCCallbackFlagCompacted");
+				break;
+			case kNoGCCallbackFlags:
+				argv[2] = String::New("kNoGCCallbackFlags");
+				break;
+			default:
+				argv[2] = String::New("UnknownFlags");
+				break;
+		}
+
+		argv[3] = Integer::New(baton->gcType);
+		argv[4] = Integer::New(baton->gcFlags);
+
+		delete [] baton->stats;
+		delete baton;
+
+		afore_callback->Call(afore_context, argc, argv);
 	}
-	
-	switch(baton->gcFlags)
-	{
-		case kGCCallbackFlagCompacted:
-			argv[2] = String::New("kGCCallbackFlagCompacted");
-			break;
-		case kNoGCCallbackFlags:
-			argv[2] = String::New("kNoGCCallbackFlags");
-			break;
-		default:
-			argv[2] = String::New("UnknownFlags");
-			break;
-	}
-	
-	argv[3] = Integer::New(baton->gcType);
-	argv[4] = Integer::New(baton->gcFlags);
-	
-	afore_callback->Call(afore_context,5, argv);
-	
-	delete [] baton->stats;
-	delete baton;
-	
+
 }
 
 // Callback executed on whatever thread the GC runs
@@ -123,14 +121,11 @@ static void after_gc(GCType type, GCCallbackFlags flags)
 {
 
 	Baton *baton = new Baton();
-	baton->request.data = baton;
-	
 	baton->stats   = getheap();
-	
 	baton->gcType  = type;
 	baton->gcFlags = flags;
-	
-	uv_queue_work(uv_default_loop(), &baton->request, nothing, after_gc_async);
+	uv_idle_start(&idle_handle, after_gc_idle);
+	QUEUE_INSERT_TAIL(&baton_queue, &baton->baton_queue);
 
 }
 
@@ -153,7 +148,11 @@ static Handle<Value> RegisterCallback(const Arguments& args) {
 
 // Setup the module
 static void init(Handle<Object> target) {
-	
+
+	QUEUE_INIT(&baton_queue);
+	uv_idle_init(uv_default_loop(), &idle_handle);
+	uv_unref(reinterpret_cast<uv_handle_t*>(&idle_handle));
+
 	// target is like module.exports
 	// we are assigning the function 'onGC'
 	// to the module
