@@ -21,8 +21,7 @@ build: bin
 	
 bin:
 	mkdir -p ${RELEASE}
-	# remove --dest-cpu ia32 to compile in x64 on 64bit host
-	node-gyp configure --dest-cpu ia32
+	node-gyp configure --dest-cpu=${ARCH}
 	node-gyp build
 	cp build/Release/gcinfo.node ${RELEASE}
 
